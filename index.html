@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>なべHub 難読化・解読ツール v3</title>
+    <title>なべHub 難読化・解読ツール v4</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: linear-gradient(135deg, #1a1a2e, #16213e); color: #eee; min-height: 100vh; padding: 20px; }
@@ -26,6 +26,8 @@
         .btn-sub { background: #0f3460; width: 100%; margin-top: 5px; }
         .btn-clear { background: #333; color: #f55; }
         .btn-detect { background: #333; color: #0f0; width: 100%; margin-top: 5px; }
+        .btn-preset { background: #252540; color: #ff6b81; font-size: 12px; padding: 6px 12px; margin: 2px; border: 1px solid #444; }
+        .btn-preset:hover { border-color: #e94560; }
         .toggle-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
         .toggle-card { background: #252540; border-radius: 8px; padding: 12px; border: 1px solid #333; transition: all 0.2s; }
         .toggle-card.active { border-color: #e94560; background: #2a1a2a; }
@@ -43,16 +45,16 @@
         input:checked + .slider { background: #e94560; }
         input:checked + .slider:before { transform: translateX(20px); }
         .detect-result { background: #0d0d1a; border: 1px solid #333; border-radius: 8px; padding: 12px; margin-top: 10px; font-size: 12px; color: #ff6b81; }
+        .stats { display: flex; gap: 15px; margin: 10px 0; font-size: 12px; color: #aaa; }
         .footer { text-align: center; color: #555; font-size: 12px; margin-top: 20px; }
         @media (max-width: 600px) { .toggle-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>なべHub 難読化・解読ツール v3</h1>
-        <p class="sub">難読化と解読の両方ができる完全版</p>
+        <h1>なべHub 難読化・解読ツール v4</h1>
+        <p class="sub">強化版 - キー隠蔽・プリセット・統計付き</p>
 
-        <!-- タブ切り替え -->
         <div class="tab-bar">
             <button class="active" onclick="switchTab('obfuscate')">難読化</button>
             <button onclick="switchTab('deobfuscate')">解読</button>
@@ -61,11 +63,20 @@
         <!-- ==================== 難読化タブ ==================== -->
         <div id="tab-obfuscate" class="tab-content active">
             <div class="panel">
-                <h3>難読化パターン（ON/OFFで選択）</h3>
+                <h3>クイックプリセット</h3>
+                <button class="btn-preset" onclick="preset('light')">簡易</button>
+                <button class="btn-preset" onclick="preset('normal')">標準</button>
+                <button class="btn-preset" onclick="preset('strong')">強化</button>
+                <button class="btn-preset" onclick="preset('max')">最強</button>
+                <span style="font-size:11px;color:#aaa;margin-left:10px;">（クリックで自動設定）</span>
+            </div>
+            <div class="panel">
+                <h3>難読化パターン</h3>
                 <div class="toggle-grid" id="patternGrid"></div>
             </div>
             <button class="btn-main" onclick="obfuscate()">難読化実行</button>
-            <div class="row" style="margin-top:15px;">
+            <div class="stats" id="obfStats"></div>
+            <div class="row" style="margin-top:10px;">
                 <div class="col">
                     <p style="margin-bottom:5px;color:#aaa;">入力コード</p>
                     <textarea id="obfInput" placeholder="ここにLuaコードを貼り付け..."></textarea>
@@ -96,7 +107,7 @@
             <div class="detect-result" id="detectInfo"></div>
         </div>
 
-        <p class="footer">なべHub 難読化・解読ツール v3 | Powered by GitHub Pages</p>
+        <p class="footer">なべHub 難読化・解読ツール v4 | Powered by GitHub Pages</p>
     </div>
 
     <script>
@@ -110,15 +121,15 @@
 
         // ==================== 難読化パターン ====================
         const patterns = [
-            { id: 'removeComments', name: 'コメント削除', desc: '-- コメントを削除', setting: null, default: true },
-            { id: 'minify', name: '圧縮', desc: '改行・スペースを削除', setting: null, default: true },
-            { id: 'shuffleVars', name: '変数名短縮', desc: 'local変数を短縮', setting: { type: 'range', label: '短さ', min: 1, max: 10, def: 3 }, default: false },
-            { id: 'asciiEncode', name: 'ASCIIコード化', desc: '文字→数値コード', setting: null, default: true },
-            { id: 'xorEncrypt', name: 'XOR暗号化', desc: 'キーで暗号化', setting: { type: 'range', label: 'キー強度', min: 1, max: 255, def: 128 }, default: false },
-            { id: 'splitStrings', name: '文字列分割', desc: '"abc"→"a".."b".."c"', setting: { type: 'range', label: '分割サイズ', min: 1, max: 50, def: 5 }, default: false },
-            { id: 'numberObf', name: '数値難読化', desc: '1→(101-100)', setting: null, default: false },
-            { id: 'base64Encode', name: 'Base64化', desc: 'コード全体Base64', setting: null, default: false },
-            { id: 'wrapLoadstring', name: 'loadstringラップ', desc: 'loadstringで実行', setting: null, default: true },
+            { id: 'removeComments', name: 'コメント削除', desc: '-- コメントを削除', setting: null, default: true, light: true, normal: true, strong: true, max: true },
+            { id: 'minify', name: '圧縮', desc: '改行・スペースを削除', setting: null, default: true, light: true, normal: true, strong: true, max: true },
+            { id: 'shuffleVars', name: '変数名短縮', desc: 'local変数を短縮', setting: { type: 'range', label: '短さ', min: 1, max: 10, def: 3 }, default: false, light: false, normal: false, strong: true, max: true },
+            { id: 'asciiEncode', name: 'ASCIIコード化', desc: '文字→数値コード', setting: null, default: true, light: true, normal: true, strong: false, max: false },
+            { id: 'xorEncrypt', name: 'XOR暗号化', desc: 'キー隠蔽で暗号化', setting: { type: 'range', label: 'キー強度', min: 1, max: 255, def: 128 }, default: false, light: false, normal: false, strong: true, max: true },
+            { id: 'splitStrings', name: '文字列分割', desc: '"abc"→"a".."b".."c"', setting: { type: 'range', label: '分割サイズ', min: 1, max: 50, def: 5 }, default: false, light: false, normal: false, strong: true, max: true },
+            { id: 'numberObf', name: '数値難読化', desc: '1→(101-100)', setting: null, default: false, light: false, normal: false, strong: true, max: true },
+            { id: 'base64Encode', name: 'Base64化', desc: 'コード全体Base64', setting: null, default: false, light: false, normal: false, strong: false, max: true },
+            { id: 'wrapLoadstring', name: 'loadstringラップ', desc: 'loadstringで実行', setting: null, default: true, light: true, normal: true, strong: true, max: true },
         ];
 
         const grid = document.getElementById('patternGrid');
@@ -138,9 +149,36 @@
         function toggleCard(id, on) { document.getElementById('card-' + id).classList.toggle('active', on); }
         function updateVal(id, val) { document.getElementById('val-' + id).textContent = val; }
 
+        // ==================== プリセット ====================
+        function preset(level) {
+            patterns.forEach(p => {
+                const cb = document.getElementById(p.id);
+                const card = document.getElementById('card-' + p.id);
+                cb.checked = p[level] || false;
+                card.classList.toggle('active', cb.checked);
+                if (p.setting && p[level]) {
+                    // 強さに応じてデフォルト値調整
+                    const defs = { light: p.setting.def, normal: p.setting.def, strong: Math.floor(p.setting.def * 1.5), max: p.setting.max };
+                    document.getElementById('val-' + p.id).textContent = defs[level];
+                }
+            });
+        }
+
+        // ==================== キー隠蔽XOR暗号化 ====================
+        function hiddenKey(key) {
+            const methods = [
+                () => '(' + (key + Math.floor(Math.random() * 50 + 30)) + '-' + Math.floor(Math.random() * 50 + 30) + ')',
+                () => '(#' + '"{' + 'x'.repeat(Math.min(key % 20 + 1, 20)) + '}"' + '+' + (key - Math.min(key % 20 + 1, 20)) + ')',
+                () => { const a = Math.floor(key / 2); const b = Math.ceil(key / 2); return '((' + a + '+' + a + ')+(' + (b - a) + '))'; },
+                () => '(' + String.fromCharCode(65 + (key % 26)) + ':byte()' + '+' + (key - (65 + (key % 26))) + ')',
+            ];
+            return methods[Math.floor(Math.random() * methods.length)]();
+        }
+
         // ==================== 難読化処理 ====================
         function obfuscate() {
             let code = document.getElementById('obfInput').value;
+            const originalLen = code.length;
             if (!code.trim()) { alert('コードを入力してください'); return; }
             const get = (id) => document.getElementById(id).checked;
             const getVal = (id) => parseInt(document.getElementById('val-' + id)?.textContent || '0');
@@ -159,21 +197,27 @@
             }
             if (get('numberObf')) code = code.replace(/\b(\d+)\b/g, (m, num) => { const n = parseInt(num); if (n < 2 || n > 9999) return m; const a = Math.floor(Math.random() * 100) + 100; return '(' + (a + n) + '-' + a + ')'; });
             if (get('minify')) code = code.replace(/\s+/g, ' ').trim();
+
+            // XOR暗号化（キー隠蔽版）
             if (get('xorEncrypt')) {
-                const key = getVal('xorEncrypt'); const encrypted = [];
+                const key = getVal('xorEncrypt') || Math.floor(Math.random() * 200) + 30;
+                const encrypted = [];
                 for (let i = 0; i < code.length; i++) encrypted.push('\\' + (code.charCodeAt(i) ^ key));
-                code = 'local k=' + key + ' local c={' + encrypted.join(',') + '} local r="" for i=1,#c do r=r..string.char(bit32.bxor(tonumber(c[i]),k)) end loadstring(r)()';
+                code = 'local k=' + hiddenKey(key) + ' local c={' + encrypted.join(',') + '} local r="" for i=1,#c do r=r..string.char(bit32.bxor(tonumber(c[i]),k)) end loadstring(r)()';
             }
+
             if (get('asciiEncode') && !get('xorEncrypt')) {
                 const chars = []; for (let i = 0; i < code.length; i++) chars.push('\\' + code.charCodeAt(i));
                 code = 'local c={' + chars.join(',') + '}\nlocal r="" for i=1,#c do r=r..string.char(tonumber(c[i])) end\nloadstring(r)()';
             }
             if (get('base64Encode')) code = 'loadstring(game:HttpGet("data:text/plain;base64,' + btoa(unescape(encodeURIComponent(code))) + '"))()';
             if (get('wrapLoadstring') && !get('xorEncrypt') && !get('base64Encode')) code = 'loadstring(function() ' + code.replace(/\n/g, ' ') + ' end)()';
+
             document.getElementById('obfOutput').value = code;
+            document.getElementById('obfStats').innerHTML = `元のサイズ: ${originalLen}文字 → 難読化後: ${code.length}文字 (${Math.round(code.length/originalLen*100)}%)`;
         }
 
-        function clearObfuscate() { document.getElementById('obfInput').value = ''; document.getElementById('obfOutput').value = ''; }
+        function clearObfuscate() { document.getElementById('obfInput').value = ''; document.getElementById('obfOutput').value = ''; document.getElementById('obfStats').innerHTML = ''; }
 
         // ==================== 解読処理 ====================
         function autoDetect() {
@@ -182,71 +226,85 @@
             const info = document.getElementById('detectInfo');
             let result = '';
 
-            // 検出1: Base64
+            // Base64
             const base64Match = code.match(/data:text\/plain;base64,([A-Za-z0-9+/=]+)/);
             if (base64Match) {
                 try {
                     result = decodeURIComponent(escape(atob(base64Match[1])));
-                    info.innerHTML = '検出: <span style="color:#0f0;">Base64エンコード</span> → デコード成功';
-                    if (/local k=\d+ local c=/.test(result)) { info.innerHTML += '<br>検出: <span style="color:#ff0;">XOR暗号化（内層）</span> → 自動復号中...'; result = decodeXOR(result); info.innerHTML += '<br>復号完了！'; }
+                    info.innerHTML = '検出: <span style="color:#0f0;">Base64</span> → デコード成功';
+                    if (/local k=/.test(result) || /bit32\.bxor/.test(result)) { info.innerHTML += '<br>内層にXOR暗号化を検出 → 再帰的に復号中...'; result = decodeXORRecursive(result); info.innerHTML += '<br>復号完了！'; }
                     document.getElementById('deobfOutput').value = result;
                     return;
-                } catch(e) { info.innerHTML = '検出: <span style="color:#f55;">Base64</span> → デコード失敗: ' + e.message; }
+                } catch(e) { info.innerHTML = '検出: <span style="color:#f55;">Base64</span> → 失敗: ' + e.message; }
             }
 
-            // 検出2: XOR暗号化
-            if (/local k=\d+ local c=/.test(code)) {
-                result = decodeXOR(code);
-                if (result) {
-                    info.innerHTML = '検出: <span style="color:#0f0;">XOR暗号化</span> → キーを検出して復号成功';
-                    document.getElementById('deobfOutput').value = result;
-                    return;
-                }
+            // XOR
+            if (/local k=.+local c=/.test(code) && /bit32\.bxor/.test(code)) {
+                result = decodeXORSmart(code);
+                if (result) { info.innerHTML = '検出: <span style="color:#0f0;">XOR暗号化（キー隠蔽対応）</span> → 復号成功'; document.getElementById('deobfOutput').value = result; return; }
             }
 
-            // 検出3: ASCIIコード化
-            if (/local c=\{.*\\\d+.*\}.*local r="".*string\.char/.test(code)) {
+            // ASCII
+            if (/local c=\{.*\\\d+.*\}.*string\.char/.test(code)) {
                 try {
                     const match = code.match(/local c=\{([^}]+)\}/);
-                    if (match) {
-                        const chars = match[1].split(',').map(c => parseInt(c.replace(/\\/g,'')));
-                        result = String.fromCharCode(...chars);
-                        info.innerHTML = '検出: <span style="color:#0f0;">ASCIIコード化</span> → デコード成功';
-                        document.getElementById('deobfOutput').value = result;
-                        return;
-                    }
-                } catch(e) { info.innerHTML = '検出: <span style="color:#f55;">ASCIIコード化</span> → デコード失敗'; }
+                    if (match) { result = String.fromCharCode(...match[1].split(',').map(c => parseInt(c.replace(/\\/g, '')))); info.innerHTML = '検出: <span style="color:#0f0;">ASCIIコード化</span> → デコード成功'; document.getElementById('deobfOutput').value = result; return; }
+                } catch(e) { info.innerHTML = '検出: <span style="color:#f55;">ASCII</span> → 失敗'; }
             }
 
-            // 検出4: 数値難読化
+            // 数値難読化
             if (/\(\d+-\d+\)/.test(code)) {
                 result = code.replace(/\((\d+)-(\d+)\)/g, (m, a, b) => (parseInt(a) - parseInt(b)));
-                info.innerHTML = '検出: <span style="color:#0f0;">数値難読化</span> → 一部復元しました';
+                info.innerHTML = '検出: <span style="color:#0f0;">数値難読化</span> → 一部復元';
                 document.getElementById('deobfOutput').value = result;
                 return;
             }
 
-            // 検出5: loadstring(function()...end)()
+            // loadstringラップ
             if (/loadstring\(function\(\)/.test(code)) {
                 const match = code.match(/loadstring\(function\(\)\s*(.*?)\s*end\)\(\)/);
-                if (match) { result = match[1]; info.innerHTML = '検出: <span style="color:#0f0;">loadstringラップ</span> → 内部コード抽出'; document.getElementById('deobfOutput').value = result; return; }
+                if (match) { result = match[1]; info.innerHTML = '検出: <span style="color:#0f0;">loadstringラップ</span> → 抽出'; document.getElementById('deobfOutput').value = result; return; }
             }
 
-            info.innerHTML = '検出: <span style="color:#f55;">不明な形式</span> → 手動解読が必要です';
+            info.innerHTML = '検出: <span style="color:#f55;">不明な形式</span> → 手動解読が必要';
             document.getElementById('deobfOutput').value = code;
         }
 
-        function decodeXOR(code) {
+        function decodeXORSmart(code) {
             try {
-                const keyMatch = code.match(/local k=(\d+)/);
+                // キー隠蔽対応：キーを計算で求める
+                let key = null;
+                const keyPatterns = [
+                    /local k=\((\d+)-(\d+)\)/,      // (314-300)
+                    /local k=\(#"[^"]*"\+(\d+)\)/,  // (#"xxx"+11)
+                    /local k=\(\(\d+\+\d+\)\+\(\d+\)\)/, // ((5+5)+(4))
+                    /local k=\([A-Z]:byte\(\)\+(\d+)\)/, // (A:byte()+...)
+                    /local k=(\d+)/,                 // 14 (fallback)
+                ];
+                for (const pat of keyPatterns) {
+                    const m = code.match(pat);
+                    if (m) { key = eval(m[1].replace(/:/g, '?')); if (!isNaN(key)) break; }
+                }
+                if (!key) return null;
+
                 const charsMatch = code.match(/local c=\{([^}]+)\}/);
-                if (!keyMatch || !charsMatch) return null;
-                const key = parseInt(keyMatch[1]);
+                if (!charsMatch) return null;
                 const chars = charsMatch[1].split(',').map(c => parseInt(c.replace(/\\/g, '')));
                 let result = '';
                 for (const c of chars) { if (isNaN(c)) continue; result += String.fromCharCode(c ^ key); }
                 return result;
             } catch(e) { return null; }
+        }
+
+        function decodeXORRecursive(code) {
+            let result = code;
+            let prev = '';
+            while (result !== prev) {
+                prev = result;
+                const decoded = decodeXORSmart(result);
+                if (decoded) result = decoded;
+            }
+            return result;
         }
 
         function copyResult(id) {
