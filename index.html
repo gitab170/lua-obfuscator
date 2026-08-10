@@ -1,30 +1,254 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-    <title>Lua難読化</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>なべHub 難読化ツール</title>
     <style>
-        body { font-family: monospace; background: #1a1a2e; color: #eee; padding: 20px; }
-        textarea { width: 100%; height: 200px; background: #16213e; color: #0f0; border: 1px solid #333; }
-        button { padding: 10px 20px; background: #e94560; color: #fff; border: none; cursor: pointer; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: linear-gradient(135deg, #1a1a2e, #16213e); color: #eee; min-height: 100vh; padding: 20px; }
+        .container { max-width: 950px; margin: 0 auto; }
+        h1 { text-align: center; font-size: 28px; margin-bottom: 5px; background: linear-gradient(90deg, #e94560, #ff6b81); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .sub { text-align: center; color: #aaa; font-size: 13px; margin-bottom: 20px; }
+        .panel { background: #1e1e30; border-radius: 12px; padding: 15px 20px; margin-bottom: 15px; border: 1px solid #333; }
+        .panel h3 { font-size: 14px; color: #ff6b81; margin-bottom: 10px; }
+        .row { display: flex; gap: 15px; flex-wrap: wrap; }
+        .col { flex: 1; min-width: 280px; }
+        textarea { width: 100%; height: 300px; background: #0d0d1a; color: #0f0; border: 1px solid #444; border-radius: 8px; padding: 12px; font-family: 'Consolas', 'Monaco', monospace; font-size: 13px; resize: vertical; }
+        button { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.2s; color: #fff; }
+        button:hover { transform: translateY(-1px); opacity: 0.9; }
+        .btn-obf { background: linear-gradient(135deg, #e94560, #c23152); width: 100%; padding: 14px; font-size: 16px; margin-top: 10px; }
+        .btn-copy { background: #0f3460; width: 100%; margin-top: 5px; }
+        .btn-clear { background: #333; color: #f55; }
+
+        /* トグルカード */
+        .toggle-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+        .toggle-card { background: #252540; border-radius: 8px; padding: 12px; border: 1px solid #333; transition: all 0.2s; }
+        .toggle-card.active { border-color: #e94560; background: #2a1a2a; }
+        .toggle-card .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .toggle-card .name { font-weight: bold; font-size: 13px; }
+        .toggle-card .desc { font-size: 11px; color: #999; margin-bottom: 8px; }
+        .toggle-card .settings { display: none; margin-top: 8px; }
+        .toggle-card.active .settings { display: block; }
+        .toggle-card input[type="range"] { width: 100%; margin: 4px 0; }
+        .toggle-card .val { font-size: 11px; color: #ff6b81; text-align: right; }
+
+        /* スイッチ */
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #444; border-radius: 24px; transition: .3s; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: .3s; }
+        input:checked + .slider { background: #e94560; }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        .footer { text-align: center; color: #555; font-size: 12px; margin-top: 20px; }
+        @media (max-width: 600px) { .toggle-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
-    <h1>Lua Obfuscator</h1>
-    <textarea id="input" placeholder="ここにLuaコードを貼り付け..."></textarea>
-    <button onclick="obfuscate()">難読化</button>
-    <textarea id="output" placeholder="結果..." readonly></textarea>
-    
+    <div class="container">
+        <h1>なべHub 難読化ツール v2</h1>
+        <p class="sub">パターンを選んでカスタマイズ・難読化</p>
+
+        <!-- 難読化パターン -->
+        <div class="panel">
+            <h3>難読化パターン（ON/OFFで選択）</h3>
+            <div class="toggle-grid" id="patternGrid"></div>
+        </div>
+
+        <!-- アクション -->
+        <button class="btn-obf" onclick="obfuscate()">難読化実行</button>
+
+        <!-- メインエリア -->
+        <div class="row" style="margin-top:15px;">
+            <div class="col">
+                <p style="margin-bottom:5px;color:#aaa;">入力コード</p>
+                <textarea id="input" placeholder="ここにLuaコードを貼り付け..."></textarea>
+                <button class="btn-clear" onclick="clearAll()" style="margin-top:5px;">クリア</button>
+            </div>
+            <div class="col">
+                <p style="margin-bottom:5px;color:#aaa;">難読化結果</p>
+                <textarea id="output" placeholder="結果がここに表示されます..." readonly></textarea>
+                <button class="btn-copy" onclick="copyResult()">結果をコピー</button>
+            </div>
+        </div>
+
+        <p class="footer">なべHub 難読化ツール v2 | Powered by GitHub Pages</p>
+    </div>
+
     <script>
+        // パターン定義
+        const patterns = [
+            {
+                id: 'removeComments', name: 'コメント削除', desc: '-- で始まるコメントを削除',
+                setting: null, default: true
+            },
+            {
+                id: 'minify', name: '圧縮', desc: '改行・スペースを削除',
+                setting: null, default: true
+            },
+            {
+                id: 'shuffleVars', name: '変数名短縮', desc: 'ローカル変数を短い名前に',
+                setting: { type: 'range', label: '短さ', min: 1, max: 10, def: 3 },
+                default: false
+            },
+            {
+                id: 'asciiEncode', name: 'ASCIIコード化', desc: '文字を数値コードに変換',
+                setting: null, default: true
+            },
+            {
+                id: 'xorEncrypt', name: 'XOR暗号化', desc: 'キーでXOR暗号化',
+                setting: { type: 'range', label: 'キー強度', min: 1, max: 255, def: 128 },
+                default: false
+            },
+            {
+                id: 'splitStrings', name: '文字列分割', desc: '"abc" → "a".."b".."c"',
+                setting: { type: 'range', label: '分割サイズ', min: 1, max: 50, def: 5 },
+                default: false
+            },
+            {
+                id: 'numberObf', name: '数値難読化', desc: '1 → (2-1) のように変換',
+                setting: null, default: false
+            },
+            {
+                id: 'base64Encode', name: 'Base64化', desc: 'コード全体をBase64に',
+                setting: null, default: false
+            },
+            {
+                id: 'wrapLoadstring', name: 'loadstringラップ', desc: 'loadstringで実行',
+                setting: null, default: true
+            },
+        ];
+
+        // UI生成
+        const grid = document.getElementById('patternGrid');
+        patterns.forEach(p => {
+            const card = document.createElement('div');
+            card.className = 'toggle-card' + (p.default ? ' active' : '');
+            card.id = 'card-' + p.id;
+
+            let settingsHTML = '';
+            if (p.setting) {
+                const s = p.setting;
+                settingsHTML = `<div class="settings">
+                    <span style="font-size:11px;color:#aaa;">${s.label}: <span class="val" id="val-${p.id}">${s.def}</span></span>
+                    <input type="range" min="${s.min}" max="${s.max}" value="${s.def}" oninput="updateVal('${p.id}', this.value)">
+                </div>`;
+            }
+
+            card.innerHTML = `
+                <div class="header">
+                    <span class="name">${p.name}</span>
+                    <label class="switch">
+                        <input type="checkbox" id="${p.id}" ${p.default ? 'checked' : ''} onchange="toggleCard('${p.id}', this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="desc">${p.desc}</div>
+                ${settingsHTML}
+            `;
+            grid.appendChild(card);
+        });
+
+        function toggleCard(id, on) {
+            document.getElementById('card-' + id).classList.toggle('active', on);
+        }
+        function updateVal(id, val) {
+            document.getElementById('val-' + id).textContent = val;
+        }
+
+        // 難読化処理
         function obfuscate() {
             let code = document.getElementById('input').value;
-            let result = [];
-            for (let i = 0; i < code.length; i++) {
-                result.push('\\' + code.charCodeAt(i));
+            if (!code.trim()) { alert('コードを入力してください'); return; }
+
+            const get = (id) => document.getElementById(id).checked;
+            const getVal = (id) => parseInt(document.getElementById('val-' + id)?.textContent || '0');
+
+            // コメント削除
+            if (get('removeComments')) {
+                code = code.replace(/--[^\n]*/g, '').replace(/\n\s*\n/g, '\n');
             }
-            document.getElementById('output').value = 
-                'local c={' + result.join(',') + '}\n' +
-                'local r="" for i=1,#c do r=r..string.char(tonumber(c[i])) end\n' +
-                'loadstring(r)()';
+
+            // 変数名短縮
+            if (get('shuffleVars')) {
+                const len = getVal('shuffleVars');
+                let counter = 0;
+                code = code.replace(/\blocal\s+([a-zA-Z_]\w*)/g, (m, name) => {
+                    if (['and','break','do','else','elseif','end','false','for','function','goto','if','in','local','nil','not','or','repeat','return','then','true','until','while'].includes(name)) return m;
+                    return 'local ' + 'v' + (counter++).toString(36).slice(0, len);
+                });
+            }
+
+            // 文字列分割
+            if (get('splitStrings')) {
+                const size = getVal('splitStrings');
+                code = code.replace(/"([^"]*)"/g, (m, str) => {
+                    if (str.length <= size) return m;
+                    const parts = [];
+                    for (let i = 0; i < str.length; i += size) {
+                        parts.push('"' + str.slice(i, i + size) + '"');
+                    }
+                    return parts.join('..');
+                });
+            }
+
+            // 数値難読化
+            if (get('numberObf')) {
+                code = code.replace(/\b(\d+)\b/g, (m, num) => {
+                    const n = parseInt(num);
+                    if (n < 2 || n > 9999) return m;
+                    const a = Math.floor(Math.random() * 100) + 100;
+                    return '(' + (a + n) + '-' + a + ')';
+                });
+            }
+
+            // 圧縮
+            if (get('minify')) {
+                code = code.replace(/\s+/g, ' ').trim();
+            }
+
+            // XOR暗号化
+            if (get('xorEncrypt')) {
+                const key = getVal('xorEncrypt');
+                const encrypted = [];
+                for (let i = 0; i < code.length; i++) {
+                    encrypted.push('\\' + (code.charCodeAt(i) ^ key));
+                }
+                code = 'local k=' + key + ' local c={' + encrypted.join(',') + '} local r="" for i=1,#c do r=r..string.char(bit32.bxor(tonumber(c[i]),k)) end loadstring(r)()';
+            }
+
+            // ASCIIコード化
+            if (get('asciiEncode') && !get('xorEncrypt')) {
+                const chars = [];
+                for (let i = 0; i < code.length; i++) {
+                    chars.push('\\' + code.charCodeAt(i));
+                }
+                code = 'local c={' + chars.join(',') + '}\nlocal r="" for i=1,#c do r=r..string.char(tonumber(c[i])) end\nloadstring(r)()';
+            }
+
+            // Base64化
+            if (get('base64Encode')) {
+                code = 'loadstring(game:HttpGet("data:text/plain;base64,' + btoa(unescape(encodeURIComponent(code))) + '"))()';
+            }
+
+            // loadstringラップ
+            if (get('wrapLoadstring') && !get('xorEncrypt') && !get('base64Encode')) {
+                code = 'loadstring(function() ' + code.replace(/\n/g, ' ') + ' end)()';
+            }
+
+            document.getElementById('output').value = code;
+        }
+
+        function copyResult() {
+            const output = document.getElementById('output');
+            output.select();
+            document.execCommand('copy');
+            alert('コピーしました！');
+        }
+        function clearAll() {
+            document.getElementById('input').value = '';
+            document.getElementById('output').value = '';
         }
     </script>
 </body>
