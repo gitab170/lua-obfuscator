@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lua難読化</title>
+    <style>
+        body { font-family: monospace; background: #1a1a2e; color: #eee; padding: 20px; }
+        textarea { width: 100%; height: 200px; background: #16213e; color: #0f0; border: 1px solid #333; }
+        button { padding: 10px 20px; background: #e94560; color: #fff; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Lua Obfuscator</h1>
+    <textarea id="input" placeholder="ここにLuaコードを貼り付け..."></textarea>
+    <button onclick="obfuscate()">難読化</button>
+    <textarea id="output" placeholder="結果..." readonly></textarea>
+    
+    <script>
+        function obfuscate() {
+            let code = document.getElementById('input').value;
+            let result = [];
+            for (let i = 0; i < code.length; i++) {
+                result.push('\\' + code.charCodeAt(i));
+            }
+            document.getElementById('output').value = 
+                'local c={' + result.join(',') + '}\n' +
+                'local r="" for i=1,#c do r=r..string.char(tonumber(c[i])) end\n' +
+                'loadstring(r)()';
+        }
+    </script>
+</body>
+</html>
