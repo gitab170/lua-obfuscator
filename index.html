@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>なべHub 難読化・解読ツール v4</title>
+    <title>なべHub 難読化・解読ツール v4.1</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: linear-gradient(135deg, #1a1a2e, #16213e); color: #eee; min-height: 100vh; padding: 20px; }
@@ -19,7 +19,7 @@
         .panel h3 { font-size: 14px; color: #ff6b81; margin-bottom: 10px; }
         .row { display: flex; gap: 15px; flex-wrap: wrap; }
         .col { flex: 1; min-width: 280px; }
-        textarea { width: 100%; height: 300px; background: #0d0d1a; color: #0f0; border: 1px solid #444; border-radius: 8px; padding: 12px; font-family: 'Consolas', 'Monaco', monospace; font-size: 13px; resize: vertical; }
+        textarea { width: 100%; height: 280px; background: #0d0d1a; color: #0f0; border: 1px solid #444; border-radius: 8px; padding: 12px; font-family: 'Consolas', 'Monaco', monospace; font-size: 13px; resize: vertical; }
         button { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.2s; color: #fff; }
         button:hover { transform: translateY(-1px); opacity: 0.9; }
         .btn-main { background: linear-gradient(135deg, #e94560, #c23152); width: 100%; padding: 14px; font-size: 16px; margin-top: 10px; }
@@ -52,23 +52,21 @@
 </head>
 <body>
     <div class="container">
-        <h1>なべHub 難読化・解読ツール v4</h1>
-        <p class="sub">強化版 - キー隠蔽・プリセット・統計付き</p>
+        <h1>なべHub 難読化・解読ツール v4.1</h1>
+        <p class="sub">安定版 - URL対応・キー隠蔽・再帰解読</p>
 
         <div class="tab-bar">
             <button class="active" onclick="switchTab('obfuscate')">難読化</button>
             <button onclick="switchTab('deobfuscate')">解読</button>
         </div>
 
-        <!-- ==================== 難読化タブ ==================== -->
         <div id="tab-obfuscate" class="tab-content active">
             <div class="panel">
                 <h3>クイックプリセット</h3>
                 <button class="btn-preset" onclick="preset('light')">簡易</button>
                 <button class="btn-preset" onclick="preset('normal')">標準</button>
                 <button class="btn-preset" onclick="preset('strong')">強化</button>
-                <button class="btn-preset" onclick="preset('max')">最強</button>
-                <span style="font-size:11px;color:#aaa;margin-left:10px;">（クリックで自動設定）</span>
+                <button class="btn-preset" onclick="preset('max')">最強（URL対応）</button>
             </div>
             <div class="panel">
                 <h3>難読化パターン</h3>
@@ -80,38 +78,36 @@
                 <div class="col">
                     <p style="margin-bottom:5px;color:#aaa;">入力コード</p>
                     <textarea id="obfInput" placeholder="ここにLuaコードを貼り付け..."></textarea>
-                    <button class="btn-clear" onclick="clearObfuscate()" style="margin-top:5px;">クリア</button>
+                    <button class="btn-clear" onclick="clearObfuscate()">クリア</button>
                 </div>
                 <div class="col">
                     <p style="margin-bottom:5px;color:#aaa;">難読化結果</p>
                     <textarea id="obfOutput" placeholder="結果がここに表示されます..." readonly></textarea>
-                    <button class="btn-sub" onclick="copyResult('obfOutput')">結果をコピー</button>
+                    <button class="btn-sub" onclick="copyResult('obfOutput')">コピー</button>
                 </div>
             </div>
         </div>
 
-        <!-- ==================== 解読タブ ==================== -->
         <div id="tab-deobfuscate" class="tab-content">
             <div class="row">
                 <div class="col">
-                    <p style="margin-bottom:5px;color:#aaa;">難読化されたコード</p>
+                    <p style="margin-bottom:5px;color:#aaa;">難読化コード</p>
                     <textarea id="deobfInput" placeholder="難読化されたコードを貼り付け..."></textarea>
                     <button class="btn-detect" onclick="autoDetect()">自動検出して解読</button>
                 </div>
                 <div class="col">
                     <p style="margin-bottom:5px;color:#aaa;">解読結果</p>
                     <textarea id="deobfOutput" placeholder="結果がここに表示されます..." readonly></textarea>
-                    <button class="btn-sub" onclick="copyResult('deobfOutput')">結果をコピー</button>
+                    <button class="btn-sub" onclick="copyResult('deobfOutput')">コピー</button>
                 </div>
             </div>
             <div class="detect-result" id="detectInfo"></div>
         </div>
 
-        <p class="footer">なべHub 難読化・解読ツール v4 | Powered by GitHub Pages</p>
+        <p class="footer">なべHub 難読化・解読ツール v4.1 | Powered by GitHub Pages</p>
     </div>
 
     <script>
-        // ==================== タブ切り替え ====================
         function switchTab(tab) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-bar button').forEach(b => b.classList.remove('active'));
@@ -119,14 +115,13 @@
             event.target.classList.add('active');
         }
 
-        // ==================== 難読化パターン ====================
         const patterns = [
             { id: 'removeComments', name: 'コメント削除', desc: '-- コメントを削除', setting: null, default: true, light: true, normal: true, strong: true, max: true },
             { id: 'minify', name: '圧縮', desc: '改行・スペースを削除', setting: null, default: true, light: true, normal: true, strong: true, max: true },
             { id: 'shuffleVars', name: '変数名短縮', desc: 'local変数を短縮', setting: { type: 'range', label: '短さ', min: 1, max: 10, def: 3 }, default: false, light: false, normal: false, strong: true, max: true },
             { id: 'asciiEncode', name: 'ASCIIコード化', desc: '文字→数値コード', setting: null, default: true, light: true, normal: true, strong: false, max: false },
-            { id: 'xorEncrypt', name: 'XOR暗号化', desc: 'キー隠蔽で暗号化', setting: { type: 'range', label: 'キー強度', min: 1, max: 255, def: 128 }, default: false, light: false, normal: false, strong: true, max: true },
-            { id: 'splitStrings', name: '文字列分割', desc: '"abc"→"a".."b".."c"', setting: { type: 'range', label: '分割サイズ', min: 1, max: 50, def: 5 }, default: false, light: false, normal: false, strong: true, max: true },
+            { id: 'xorEncrypt', name: 'XOR暗号化', desc: 'キー隠蔽で暗号化', setting: { type: 'range', label: 'キー', min: 1, max: 255, def: 128 }, default: false, light: false, normal: false, strong: true, max: true },
+            { id: 'splitStrings', name: '文字列分割', desc: '"abc"→"a".."b".."c"', setting: { type: 'range', label: '分割', min: 1, max: 50, def: 5 }, default: false, light: false, normal: false, strong: true, max: false },
             { id: 'numberObf', name: '数値難読化', desc: '1→(101-100)', setting: null, default: false, light: false, normal: false, strong: true, max: true },
             { id: 'base64Encode', name: 'Base64化', desc: 'コード全体Base64', setting: null, default: false, light: false, normal: false, strong: false, max: true },
             { id: 'wrapLoadstring', name: 'loadstringラップ', desc: 'loadstringで実行', setting: null, default: true, light: true, normal: true, strong: true, max: true },
@@ -137,174 +132,170 @@
             const card = document.createElement('div');
             card.className = 'toggle-card' + (p.default ? ' active' : '');
             card.id = 'card-' + p.id;
-            let settingsHTML = '';
+            let sHTML = '';
             if (p.setting) {
                 const s = p.setting;
-                settingsHTML = `<div class="settings"><span style="font-size:11px;color:#aaa;">${s.label}: <span class="val" id="val-${p.id}">${s.def}</span></span><input type="range" min="${s.min}" max="${s.max}" value="${s.def}" oninput="updateVal('${p.id}', this.value)"></div>`;
+                sHTML = `<div class="settings"><span style="font-size:11px;color:#aaa;">${s.label}: <span class="val" id="val-${p.id}">${s.def}</span></span><input type="range" min="${s.min}" max="${s.max}" value="${s.def}" oninput="updateVal('${p.id}', this.value)"></div>`;
             }
-            card.innerHTML = `<div class="header"><span class="name">${p.name}</span><label class="switch"><input type="checkbox" id="${p.id}" ${p.default ? 'checked' : ''} onchange="toggleCard('${p.id}', this.checked)"><span class="slider"></span></label></div><div class="desc">${p.desc}</div>${settingsHTML}`;
+            card.innerHTML = `<div class="header"><span class="name">${p.name}</span><label class="switch"><input type="checkbox" id="${p.id}" ${p.default ? 'checked' : ''} onchange="toggleCard('${p.id}', this.checked)"><span class="slider"></span></label></div><div class="desc">${p.desc}</div>${sHTML}`;
             grid.appendChild(card);
         });
 
         function toggleCard(id, on) { document.getElementById('card-' + id).classList.toggle('active', on); }
         function updateVal(id, val) { document.getElementById('val-' + id).textContent = val; }
 
-        // ==================== プリセット ====================
         function preset(level) {
             patterns.forEach(p => {
                 const cb = document.getElementById(p.id);
                 const card = document.getElementById('card-' + p.id);
                 cb.checked = p[level] || false;
                 card.classList.toggle('active', cb.checked);
-                if (p.setting && p[level]) {
-                    // 強さに応じてデフォルト値調整
-                    const defs = { light: p.setting.def, normal: p.setting.def, strong: Math.floor(p.setting.def * 1.5), max: p.setting.max };
-                    document.getElementById('val-' + p.id).textContent = defs[level];
+                if (p.setting && p[level] && level === 'max') {
+                    document.getElementById('val-' + p.id).textContent = p.setting.max;
                 }
             });
         }
 
-        // ==================== キー隠蔽XOR暗号化 ====================
         function hiddenKey(key) {
             const methods = [
                 () => '(' + (key + Math.floor(Math.random() * 50 + 30)) + '-' + Math.floor(Math.random() * 50 + 30) + ')',
-                () => '(#' + '"{' + 'x'.repeat(Math.min(key % 20 + 1, 20)) + '}"' + '+' + (key - Math.min(key % 20 + 1, 20)) + ')',
-                () => { const a = Math.floor(key / 2); const b = Math.ceil(key / 2); return '((' + a + '+' + a + ')+(' + (b - a) + '))'; },
-                () => '(' + String.fromCharCode(65 + (key % 26)) + ':byte()' + '+' + (key - (65 + (key % 26))) + ')',
+                () => '(#"' + 'x'.repeat(Math.min(key % 20 + 1, 15)) + '"' + '+' + (key - Math.min(key % 20 + 1, 15)) + ')',
+                () => { const a = Math.floor(key / 2); const b = Math.ceil(key / 2); return '(' + a + '+' + a + '+' + (b - a) + ')'; },
+                () => '(string.byte("' + String.fromCharCode(65 + (key % 26)) + '")' + '+' + (key - (65 + (key % 26))) + ')',
             ];
             return methods[Math.floor(Math.random() * methods.length)]();
         }
 
-        // ==================== 難読化処理 ====================
         function obfuscate() {
             let code = document.getElementById('obfInput').value;
-            const originalLen = code.length;
+            const origLen = code.length;
             if (!code.trim()) { alert('コードを入力してください'); return; }
             const get = (id) => document.getElementById(id).checked;
             const getVal = (id) => parseInt(document.getElementById('val-' + id)?.textContent || '0');
 
             if (get('removeComments')) code = code.replace(/--[^\n]*/g, '').replace(/\n\s*\n/g, '\n');
             if (get('shuffleVars')) {
-                const len = getVal('shuffleVars'); let counter = 0;
-                code = code.replace(/\blocal\s+([a-zA-Z_]\w*)/g, (m, name) => {
-                    if (['and','break','do','else','elseif','end','false','for','function','goto','if','in','local','nil','not','or','repeat','return','then','true','until','while'].includes(name)) return m;
-                    return 'local ' + 'v' + (counter++).toString(36).slice(0, len);
+                const len = getVal('shuffleVars'); let c = 0;
+                code = code.replace(/\blocal\s+([a-zA-Z_]\w*)/g, (m, n) => {
+                    if (['and','break','do','else','elseif','end','false','for','function','goto','if','in','local','nil','not','or','repeat','return','then','true','until','while'].includes(n)) return m;
+                    return 'local v' + (c++).toString(36).slice(0, len);
                 });
             }
             if (get('splitStrings')) {
-                const size = getVal('splitStrings');
-                code = code.replace(/"([^"]*)"/g, (m, str) => { if (str.length <= size) return m; const parts = []; for (let i = 0; i < str.length; i += size) parts.push('"' + str.slice(i, i + size) + '"'); return parts.join('..'); });
+                const sz = getVal('splitStrings');
+                code = code.replace(/"([^"]{2,})"/g, (m, s) => { if (s.length <= sz) return m; const p = []; for (let i = 0; i < s.length; i += sz) p.push('"' + s.slice(i, i + sz) + '"'); return p.join('..'); });
             }
-            if (get('numberObf')) code = code.replace(/\b(\d+)\b/g, (m, num) => { const n = parseInt(num); if (n < 2 || n > 9999) return m; const a = Math.floor(Math.random() * 100) + 100; return '(' + (a + n) + '-' + a + ')'; });
+            if (get('numberObf') && !get('xorEncrypt')) code = code.replace(/\b(\d+)\b/g, (m, n) => { const x = parseInt(n); if (x < 2 || x > 9999) return m; const a = Math.floor(Math.random() * 100) + 100; return '(' + (a + x) + '-' + a + ')'; });
             if (get('minify')) code = code.replace(/\s+/g, ' ').trim();
 
-            // XOR暗号化（キー隠蔽版）
             if (get('xorEncrypt')) {
                 const key = getVal('xorEncrypt') || Math.floor(Math.random() * 200) + 30;
-                const encrypted = [];
-                for (let i = 0; i < code.length; i++) encrypted.push('\\' + (code.charCodeAt(i) ^ key));
-                code = 'local k=' + hiddenKey(key) + ' local c={' + encrypted.join(',') + '} local r="" for i=1,#c do r=r..string.char(bit32.bxor(tonumber(c[i]),k)) end loadstring(r)()';
+                const enc = [];
+                for (let i = 0; i < code.length; i++) enc.push('\\' + (code.charCodeAt(i) ^ key));
+                code = 'local k=' + hiddenKey(key) + ' local c={' + enc.join(',') + '} local r="" for i=1,#c do r=r..string.char(bit32.bxor(tonumber(c[i]),k)) end loadstring(r)()';
             }
 
             if (get('asciiEncode') && !get('xorEncrypt')) {
-                const chars = []; for (let i = 0; i < code.length; i++) chars.push('\\' + code.charCodeAt(i));
-                code = 'local c={' + chars.join(',') + '}\nlocal r="" for i=1,#c do r=r..string.char(tonumber(c[i])) end\nloadstring(r)()';
+                const ch = []; for (let i = 0; i < code.length; i++) ch.push('\\' + code.charCodeAt(i));
+                code = 'local c={' + ch.join(',') + '} local r="" for i=1,#c do r=r..string.char(tonumber(c[i])) end loadstring(r)()';
             }
             if (get('base64Encode')) code = 'loadstring(game:HttpGet("data:text/plain;base64,' + btoa(unescape(encodeURIComponent(code))) + '"))()';
             if (get('wrapLoadstring') && !get('xorEncrypt') && !get('base64Encode')) code = 'loadstring(function() ' + code.replace(/\n/g, ' ') + ' end)()';
 
             document.getElementById('obfOutput').value = code;
-            document.getElementById('obfStats').innerHTML = `元のサイズ: ${originalLen}文字 → 難読化後: ${code.length}文字 (${Math.round(code.length/originalLen*100)}%)`;
+            document.getElementById('obfStats').innerHTML = `元: ${origLen}字 → 後: ${code.length}字 (${Math.round(code.length/origLen*100)}%)`;
         }
 
         function clearObfuscate() { document.getElementById('obfInput').value = ''; document.getElementById('obfOutput').value = ''; document.getElementById('obfStats').innerHTML = ''; }
 
-        // ==================== 解読処理 ====================
+        // ===== 解読（安定版） =====
         function autoDetect() {
-            const code = document.getElementById('deobfInput').value.trim();
+            let code = document.getElementById('deobfInput').value.trim();
             if (!code) { alert('コードを貼り付けてください'); return; }
             const info = document.getElementById('detectInfo');
             let result = '';
+            let detected = [];
 
-            // Base64
-            const base64Match = code.match(/data:text\/plain;base64,([A-Za-z0-9+/=]+)/);
-            if (base64Match) {
+            // 1. Base64
+            const b64 = code.match(/data:text\/plain;base64,([A-Za-z0-9+/=]+)/);
+            if (b64) {
                 try {
-                    result = decodeURIComponent(escape(atob(base64Match[1])));
-                    info.innerHTML = '検出: <span style="color:#0f0;">Base64</span> → デコード成功';
-                    if (/local k=/.test(result) || /bit32\.bxor/.test(result)) { info.innerHTML += '<br>内層にXOR暗号化を検出 → 再帰的に復号中...'; result = decodeXORRecursive(result); info.innerHTML += '<br>復号完了！'; }
-                    document.getElementById('deobfOutput').value = result;
-                    return;
-                } catch(e) { info.innerHTML = '検出: <span style="color:#f55;">Base64</span> → 失敗: ' + e.message; }
+                    result = decodeURIComponent(escape(atob(b64[1])));
+                    detected.push('Base64');
+                    code = result;
+                } catch(e) { info.innerHTML = 'Base64デコード失敗'; return; }
             }
 
-            // XOR
-            if (/local k=.+local c=/.test(code) && /bit32\.bxor/.test(code)) {
-                result = decodeXORSmart(code);
-                if (result) { info.innerHTML = '検出: <span style="color:#0f0;">XOR暗号化（キー隠蔽対応）</span> → 復号成功'; document.getElementById('deobfOutput').value = result; return; }
-            }
-
-            // ASCII
-            if (/local c=\{.*\\\d+.*\}.*string\.char/.test(code)) {
+            // 2. XOR
+            if (/local k=.+local c=/.test(code) && /bxor/.test(code)) {
                 try {
-                    const match = code.match(/local c=\{([^}]+)\}/);
-                    if (match) { result = String.fromCharCode(...match[1].split(',').map(c => parseInt(c.replace(/\\/g, '')))); info.innerHTML = '検出: <span style="color:#0f0;">ASCIIコード化</span> → デコード成功'; document.getElementById('deobfOutput').value = result; return; }
-                } catch(e) { info.innerHTML = '検出: <span style="color:#f55;">ASCII</span> → 失敗'; }
+                    // キーを抽出（隠蔽対応）
+                    let key = null;
+                    const kp = [
+                        /local k=\((\d+)-(\d+)\)/,
+                        /local k=\(#"(x*)"\+(\d+)\)/,
+                        /local k=\((\d+)\+(\d+)\+(\d+)\)/,
+                        /local k=\(string\.byte\("([A-Z])"\)\+(\d+)\)/,
+                        /local k=(\d+)/,
+                    ];
+                    for (const p of kp) {
+                        const m = code.match(p);
+                        if (m) {
+                            if (m.length === 3 && m[1] && m[2]) key = parseInt(m[1]) - parseInt(m[2].replace(/[^0-9]/g, '') || '0');
+                            else if (m.length === 3 && p.toString().includes('#"')) key = (m[1]?.length || 0) + parseInt(m[2] || '0');
+                            else if (m.length === 4 && m[1] && m[2] && m[3]) key = parseInt(m[1]) + parseInt(m[2]) + parseInt(m[3]);
+                            else if (m.length === 3 && p.toString().includes('string.byte')) key = (m[1]?.charCodeAt(0) || 65) + parseInt(m[2] || '0');
+                            else if (m[1]) key = parseInt(m[1]);
+                            if (key && !isNaN(key) && key > 0 && key < 256) break;
+                            key = null;
+                        }
+                    }
+
+                    if (key) {
+                        const cm = code.match(/local c=\{([^}]+)\}/);
+                        if (cm) {
+                            const chars = cm[1].split(',').map(c => parseInt(c.replace(/\\/g, '') || '0'));
+                            result = '';
+                            for (const c of chars) { if (!isNaN(c)) result += String.fromCharCode(c ^ key); }
+                            detected.push('XOR(key=' + key + ')');
+                            code = result;
+                        }
+                    }
+                } catch(e) {}
             }
 
-            // 数値難読化
-            if (/\(\d+-\d+\)/.test(code)) {
-                result = code.replace(/\((\d+)-(\d+)\)/g, (m, a, b) => (parseInt(a) - parseInt(b)));
-                info.innerHTML = '検出: <span style="color:#0f0;">数値難読化</span> → 一部復元';
-                document.getElementById('deobfOutput').value = result;
-                return;
+            // 3. ASCII
+            if (/local c=\{.*\\\d+.*\}.*string\.char/.test(code) && !/bxor/.test(code)) {
+                try {
+                    const cm = code.match(/local c=\{([^}]+)\}/);
+                    if (cm) {
+                        result = String.fromCharCode(...cm[1].split(',').map(c => parseInt(c.replace(/\\/g, '') || '0')));
+                        detected.push('ASCII');
+                        code = result;
+                    }
+                } catch(e) {}
             }
 
-            // loadstringラップ
+            // 4. loadstringラップ
             if (/loadstring\(function\(\)/.test(code)) {
-                const match = code.match(/loadstring\(function\(\)\s*(.*?)\s*end\)\(\)/);
-                if (match) { result = match[1]; info.innerHTML = '検出: <span style="color:#0f0;">loadstringラップ</span> → 抽出'; document.getElementById('deobfOutput').value = result; return; }
+                const m = code.match(/loadstring\(function\(\)\s*(.*?)\s*end\)\(\)/);
+                if (m) { result = m[1].trim(); detected.push('loadstringラップ'); code = result; }
             }
 
-            info.innerHTML = '検出: <span style="color:#f55;">不明な形式</span> → 手動解読が必要';
-            document.getElementById('deobfOutput').value = code;
-        }
-
-        function decodeXORSmart(code) {
-            try {
-                // キー隠蔽対応：キーを計算で求める
-                let key = null;
-                const keyPatterns = [
-                    /local k=\((\d+)-(\d+)\)/,      // (314-300)
-                    /local k=\(#"[^"]*"\+(\d+)\)/,  // (#"xxx"+11)
-                    /local k=\(\(\d+\+\d+\)\+\(\d+\)\)/, // ((5+5)+(4))
-                    /local k=\([A-Z]:byte\(\)\+(\d+)\)/, // (A:byte()+...)
-                    /local k=(\d+)/,                 // 14 (fallback)
-                ];
-                for (const pat of keyPatterns) {
-                    const m = code.match(pat);
-                    if (m) { key = eval(m[1].replace(/:/g, '?')); if (!isNaN(key)) break; }
-                }
-                if (!key) return null;
-
-                const charsMatch = code.match(/local c=\{([^}]+)\}/);
-                if (!charsMatch) return null;
-                const chars = charsMatch[1].split(',').map(c => parseInt(c.replace(/\\/g, '')));
-                let result = '';
-                for (const c of chars) { if (isNaN(c)) continue; result += String.fromCharCode(c ^ key); }
-                return result;
-            } catch(e) { return null; }
-        }
-
-        function decodeXORRecursive(code) {
-            let result = code;
-            let prev = '';
-            while (result !== prev) {
-                prev = result;
-                const decoded = decodeXORSmart(result);
-                if (decoded) result = decoded;
+            // 5. 数値難読化
+            if (/\(\d+-\d+\)/.test(code)) {
+                code = code.replace(/\((\d+)-(\d+)\)/g, (m, a, b) => String(parseInt(a) - parseInt(b)));
+                detected.push('数値難読化');
+                result = code;
             }
-            return result;
+
+            if (detected.length > 0) {
+                info.innerHTML = '検出: <span style="color:#0f0;">' + detected.join(' → ') + '</span> → 解読完了';
+                document.getElementById('deobfOutput').value = result;
+            } else {
+                info.innerHTML = '検出: <span style="color:#f55;">不明な形式</span>';
+                document.getElementById('deobfOutput').value = code;
+            }
         }
 
         function copyResult(id) {
